@@ -296,6 +296,26 @@ object MudSocket
         dsock.control.getOutputStream().write(txt.getBytes())
         true
     }
+
+    def handle_cmd_input(dsock: dSocket, arg: String): Unit = {
+        // char command[MAX_BUFFER];
+
+        val dMob = dsock.player
+        dMob foreach { mob =>
+            // val arg = one_arg(arg, command)
+            val (first, rest) = 
+                arg.split("\\s+", 1) match {
+                    case Array(first, rest) => (first, rest)
+                    case Array(first) => (first, "")
+                    case _ => ("", "")
+                }
+
+            tabCmd find { cmd => cmd.level <= mob.level && cmd.cmd_name.startsWith(first) } match {
+                case Some(cmd) => cmd.cmd_funct(mob, rest)
+                case None => text_to_mobile(mob, "No such command.\n\r")
+            }
+        }
+    }
 }
 
 class MudSocket(mudPort: Int)
@@ -375,7 +395,7 @@ class MudSocket(mudPort: Int)
             }
 
             /* call the event queue */
-            heartbeat()
+            EventHandler.heartbeat()
 
             /*
              * Here we sleep out the rest of the pulse, thus forcing
@@ -626,7 +646,7 @@ class MudSocket(mudPort: Int)
                 IO.log_string(s"${Character.toUpperCase(arg.head)}${arg.tail} is trying to connect.")(dmobile_list)
 
                 /* Check for a new Player */
-                val p_new = load_profile(arg)
+                val p_new = Save.load_profile(arg)
                 if (p_new.isDefined) {
                     /* give the player it's name */
                     p_new.get.name = arg
@@ -644,7 +664,7 @@ class MudSocket(mudPort: Int)
                 text_to_buffer(dsock, DONT_ECHO)
 
                 /* socket <-> player */
-                p_new.socket = Some(dsock)
+                p_new foreach { _.socket = Some(dsock) }
                 dsock.player = p_new
 
             case STATE_NEW_PASSWORD =>
@@ -712,7 +732,7 @@ class MudSocket(mudPort: Int)
                     EventHandler.strip_event_socket(dsock, Event.EVENT_SOCKET_IDLE)
                   }
                   else {
-                      val p_new = load_player(dsock.player.get.name)
+                      val p_new = Save.load_player(dsock.player.get.name)
                       if (!p_new.isDefined) {
                           text_to_socket(dsock, "ERROR: Your pfile is missing!\n\r")
                           Utils.free_mobile(dsock.player.get)
@@ -723,11 +743,11 @@ class MudSocket(mudPort: Int)
                       else {
                           /* attach the new player */
                           Utils.free_mobile(dsock.player.get)
-                          dsock.player = Some(p_new)
-                          p_new.socket = dsock
+                          dsock.player = p_new
+                          p_new foreach { _.socket = Some(dsock) }
 
                           /* put him in the active list */
-                          dmobile_list = p_new :: dmobile_list
+                          dmobile_list = p_new.get :: dmobile_list
 
                           IO.log_string(s"s{dsock.player.name} has entered the game.")(dmobile_list)
 

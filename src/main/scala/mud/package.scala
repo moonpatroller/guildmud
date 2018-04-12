@@ -142,16 +142,16 @@ package object mud {
         gmcp_enabled: Boolean               /* GMCP support */
     )
 
+
     case class dMobile(
         var socket: Option[dSocket],
         var events: List[EventData],
-        name: String,
+        var name: String,
         var password: String,
         level: Int
     )
 
     case class HelpData(
-        load_time: Long,
         keyword: String,
         text: String
     )
@@ -162,12 +162,6 @@ package object mud {
         // java.net.Socket?
     )
 
-    case class typCmd(
-        cmd_name: String,
-        cmd_funct: (dMobile, String) => Unit,
-        level: Int
-    )
-
     case class BufferType(
         data: Array[Byte],  /* The data                      */
         len: Int,           /* The current len of the buffer */
@@ -175,6 +169,30 @@ package object mud {
     )
 
     type BUFFER = BufferType
+
+    case class typCmd(
+        cmd_name: String,
+        cmd_funct: (dMobile, String) => Unit,
+        level: Int
+    )
+
+    /*
+     * The command table, very simple, but easy to extend.
+     */
+    val tabCmd = Array(
+        /* command          function        Req. Level   */
+        /* --------------------------------------------- */
+        typCmd( "commands",      ActionSafe.cmd_commands,   LEVEL_GUEST  ),
+        typCmd( "compress",      ActionSafe.cmd_compress,   LEVEL_GUEST  ),
+        typCmd( "copyover",      ActionSafe.cmd_copyover,   LEVEL_GOD    ),
+        typCmd( "help",          ActionSafe.cmd_help,       LEVEL_GUEST  ),
+        typCmd( "linkdead",      ActionSafe.cmd_linkdead,   LEVEL_ADMIN  ),
+        typCmd( "say",           ActionSafe.cmd_say,        LEVEL_GUEST  ),
+        typCmd( "save",          ActionSafe.cmd_save,       LEVEL_GUEST  ),
+        typCmd( "shutdown",      ActionSafe.cmd_shutdown,   LEVEL_GOD    ),
+        typCmd( "quit",          ActionSafe.cmd_quit,       LEVEL_GUEST  ),
+        typCmd( "who",           ActionSafe.cmd_who,        LEVEL_GUEST  )
+    )
 
     /******************************
      * End of new structures      *

@@ -65,26 +65,6 @@ object Event
         var owner: Option[Either[dMobile, dSocket]]
     )
 
-    // /* functions which can be accessed outside event-handler.c */
-    // EVENT_DATA *alloc_event          ( void );
-    // EVENT_DATA *event_isset_socket   ( D_SOCKET *dSock, int type );
-    // EVENT_DATA *event_isset_mobile   ( D_MOBILE *dMob, int type );
-    // void dequeue_event               ( EVENT_DATA *event );
-    // void init_event_queue            ( int section );
-    // void init_events_player          ( D_MOBILE *dMob );
-    // void init_events_socket          ( D_SOCKET *dSock );
-    // void heartbeat                   ( void );
-    // void add_event_mobile            ( EVENT_DATA *event, D_MOBILE *dMob, int delay );
-    // void add_event_socket            ( EVENT_DATA *event, D_SOCKET *dSock, int delay );
-    // void add_event_game              ( EVENT_DATA *event, int delay );
-    // void strip_event_socket          ( D_SOCKET *dSock, int type );
-    // void strip_event_mobile          ( D_MOBILE *dMob, int type );
-
-    // /* all events should be defined here */
-    // bool event_mobile_save           ( EVENT_DATA *event );
-    // bool event_socket_idle           ( EVENT_DATA *event );
-    // bool event_game_tick             ( EVENT_DATA *event );
-
     /* event_game_tick is just to show how to make global events
      * which can be used to update the game.
      */
@@ -123,7 +103,7 @@ object Event
 
             case Some(Left(dMob)) =>
                 /* save the actual player file */
-                save_player(dMob)
+                Save.save_player(dMob)
 
                 /* enqueue a new event to save the pfile in 2 minutes */
                 val event = EventData(event_mobile_save, EVENT_MOBILE_SAVE)

@@ -145,44 +145,39 @@ object EventHandler
     //   }
     // }
 
-    // /* function   :: heartbeat()
-    //  * arguments  :: none
-    //  * ======================================================
-    //  * This function is called once per game pulse, and it will
-    //  * check the queue, and execute any pending events, which
-    //  * has been enqueued to execute at this specific time.
-    //  */
-    // void heartbeat()
-    // {
-    //   EVENT_DATA *event;
-    //   ITERATOR Iter;
+    /* function   :: heartbeat()
+     * arguments  :: none
+     * ======================================================
+     * This function is called once per game pulse, and it will
+     * check the queue, and execute any pending events, which
+     * has been enqueued to execute at this specific time.
+     */
+    def heartbeat(): Unit = {
+        /* current_bucket should be global, it is also used in enqueue_event
+        * to figure out what bucket to place the new event in.
+        */
+        current_bucket = (current_bucket + 1) % MAX_EVENT_HASH
 
-    //   /* current_bucket should be global, it is also used in enqueue_event
-    //    * to figure out what bucket to place the new event in.
-    //    */
-    //   current_bucket = (current_bucket + 1) % MAX_EVENT_HASH;
-
-    //   AttachIterator(&Iter, eventqueue[current_bucket]);
-    //   while ((event = (EVENT_DATA *) NextInList(&Iter)) != NULL)
-    //   {
-    //     /* Here we use the event->passes integer, to keep track of
-    //      * how many times we have ignored this event.
-    //      */
-    //     if (event->passes-- > 0) continue;
-
-    //     /* execute event and extract if needed. We assume that all
-    //      * event functions are of the following prototype
-    //      *
-    //      * bool event_function ( EVENT_DATA *event );
-    //      *
-    //      * Any event returning TRUE is not dequeued, it is assumed
-    //      * that the event has dequeued itself.
-    //      */
-    //     if (!((*event->fun)(event)))
-    //       dequeue_event(event);
-    //   }
-    //   DetachIterator(&Iter);
-    // }
+        for (event <- eventqueue(current_bucket)) {
+            /* Here we use the event->passes integer, to keep track of
+             * how many times we have ignored this event.
+             */
+            event.passes -= 1
+            if (event.passes <= 0) {
+                /* execute event and extract if needed. We assume that all
+                 * event functions are of the following prototype
+                 *
+                 * bool event_function ( EVENT_DATA *event );
+                 *
+                 * Any event returning TRUE is not dequeued, it is assumed
+                 * that the event has dequeued itself.
+                 */
+                if (!event.fun(event)) {
+                    dequeue_event(event)
+                }
+            }
+        }
+    }
 
     /* function   :: add_event_mobile()
      * arguments  :: the event, the owner and the delay
