@@ -56,7 +56,7 @@ object MudSocket
         sAnsiColor( 'w',  "37",  eTHIN ),
         sAnsiColor( 'W',  "37",  eBOLD ),
         /* the end tag */
-        sAnsiColor( '\0',  "",   eTHIN )
+        sAnsiColor( '\u0000',  "",   eTHIN )
     )
 
     /*
@@ -87,10 +87,6 @@ object MudSocket
         while (index < outputBytes.length - 1) {
 
             outputBytes(index) match {
-                case c =>
-                    buffer.append(c)
-                    index += 1
-
                 case '#' =>
                     index += 1
                     outputBytes(index) match {
@@ -178,6 +174,10 @@ object MudSocket
                                     last = tableIndex
                             }
                     }
+
+                case c =>
+                    buffer.append(c)
+                    index += 1
             }
         }
 
@@ -297,7 +297,7 @@ object MudSocket
         true
     }
 
-    def handle_cmd_input(dsock: dSocket, arg: String): Unit = {
+    def handle_cmd_input(dsock: dSocket, arg: String, mudSocket: MudSocket): Unit = {
         // char command[MAX_BUFFER];
 
         val dMob = dsock.player
@@ -311,7 +311,7 @@ object MudSocket
                 }
 
             tabCmd find { cmd => cmd.level <= mob.level && cmd.cmd_name.startsWith(first) } match {
-                case Some(cmd) => cmd.cmd_funct(mob, rest)
+                case Some(cmd) => cmd.cmd_funct(mob, rest, mudSocket)
                 case None => text_to_mobile(mob, "No such command.\n\r")
             }
         }
@@ -335,10 +335,6 @@ class MudSocket(mudPort: Int)
     var control = new ServerSocket(mudPort)
 
     def GameLoop(): Unit = {
-
-        // static struct timeval tv;
-        // struct timeval new_time;
-        // long secs, usecs;
 
         var last_time = System.currentTimeMillis()
 
@@ -376,7 +372,7 @@ class MudSocket(mudPort: Int)
                             case STATE_NEW_NAME | STATE_NEW_PASSWORD | STATE_VERIFY_PASSWORD | STATE_ASK_PASSWORD =>
                                 handle_new_connections(dsock, dsock.next_command)
                             case STATE_PLAYING =>
-                                handle_cmd_input(dsock, dsock.next_command)
+                                handle_cmd_input(dsock, dsock.next_command, this)
                             _: Int =>
                                 IO.bug("Descriptor in bad state.")(dmobile_list)
                         }
@@ -447,7 +443,7 @@ class MudSocket(mudPort: Int)
         text_to_buffer(sock_new, GMCP_WILL)
 
         /* send the greeting */
-        text_to_buffer(sock_new, greeting)
+        text_to_buffer(sock_new, "This is the greeting")
         text_to_buffer(sock_new, "What is your name? ")
 
         /* initialize socket events */
@@ -629,9 +625,6 @@ class MudSocket(mudPort: Int)
         val pepper = "PnLEkiA888KDMlRcVDtqlGcv9bsv1E" /* a global salt (a pepper) to hash all the passwords. */
 
         dsock.state match {
-            case _: Int =>
-                IO.bug("Handle_new_connections: Bad state.")(dmobile_list)
-
             case STATE_NEW_NAME =>
                 if (dsock.lookup_status != TSTATE_DONE) {
                     text_to_buffer(dsock, "Making a dns lookup, please have patience.\n\rWhat is your name? ")
@@ -697,7 +690,7 @@ class MudSocket(mudPort: Int)
 
                   /* and into the game */
                   dsock.state = STATE_PLAYING
-                  text_to_buffer(dsock, motd)
+                  text_to_buffer(dsock, "This is the motd")
 
                   /* initialize events on the player */
                   EventHandler.init_events_player(dsock.player.get)
@@ -753,7 +746,7 @@ class MudSocket(mudPort: Int)
 
                           /* and let him enter the game */
                           dsock.state = STATE_PLAYING
-                          text_to_buffer(dsock, motd)
+                          text_to_buffer(dsock, "This is the motd")
 
                           /* initialize events on the player */
                           EventHandler.init_events_player(dsock.player.get)
@@ -769,6 +762,9 @@ class MudSocket(mudPort: Int)
                   dsock.player = None
                   close_socket(dsock, false)
               }
+
+            case _: Int =>
+                IO.bug("Handle_new_connections: Bad state.")(dmobile_list)
         }
     }
 

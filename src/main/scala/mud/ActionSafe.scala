@@ -7,7 +7,7 @@ object ActionSafe
     /*
      * This file handles non-fighting player actions.
      */
-    def cmd_say(dMob: dMobile, arg: String): Unit = {
+    def cmd_say(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {
         if (arg == "") {
             MudSocket.text_to_mobile(dMob, "Say what?\n\r")
         }
@@ -16,7 +16,7 @@ object ActionSafe
         }
     }
 
-    def cmd_quit(dMob: dMobile, arg: String): Unit = {
+    def cmd_quit(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {
         /* log the attempt */
         val buf = s"s{dMob.name} has left the game."
         IO.log_string(buf)(Nil)
@@ -28,11 +28,11 @@ object ActionSafe
         dMob.socket foreach { MudSocket.close_socket(_, false) }
     }
 
-    def cmd_shutdown(dMob: dMobile, arg: String): Unit = {
+    def cmd_shutdown(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {
         // shut_down = true
     }
 
-    def cmd_commands(dMob: dMobile, arg: String): Unit = {
+    def cmd_commands(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {
         var col = 0
         var buf = "    - - - - ----==== The full command list ====---- - - - -\n\n\r"
         for (cmd <- tabCmd if dMob.level >= cmd.level) {
@@ -48,10 +48,10 @@ object ActionSafe
         MudSocket.text_to_mobile(dMob, buf)
     }
 
-    def cmd_who(dMob: dMobile, arg: String): Unit = {
+    def cmd_who(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {
         var buf = " - - - - ----==== Who's Online ====---- - - - -\n\r"
 
-        for (dsock <- dsock_list if dsock.state == STATE_PLAYING) {
+        for (dsock <- mudSocket.dsock_list.get() if dsock.state == STATE_PLAYING) {
             dsock.player foreach { xMob =>
                 buf += s" %-12s s{xMob.name}   ${dsock.hostname}\n\r"
             }
@@ -61,12 +61,12 @@ object ActionSafe
         MudSocket.text_to_mobile(dMob, buf)
     }
 
-    def cmd_help(dMob: dMobile, arg: String): Unit = {
+    def cmd_help(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {
         if (arg == "") {
             var col = 0
             var buf = "      - - - - - ----====//// HELP FILES  \\\\\\\\====---- - - - - -\n\n\r"
 
-            for (pHelp <- help_list) {
+            for (pHelp <- Help.help_list) {
                 buf += s" %-19.18s s{pHelp.keyword}"
                 col += 1
                 if (col % 4 == 0) {
@@ -85,7 +85,7 @@ object ActionSafe
         }
     }
 
-    def cmd_compress(dMob: dMobile, arg: String): Unit = {
+    def cmd_compress(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {
 //       /* no socket, no compression */
 //       if (!dMob->socket)
 //         return;
@@ -108,12 +108,12 @@ object ActionSafe
 //       }
     }
 
-    def cmd_save(dMob: dMobile, arg: String): Unit = {
+    def cmd_save(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {
         Save.save_player(dMob)
         MudSocket.text_to_mobile(dMob, "Saved.\n\r")
     }
 
-    def cmd_copyover(dMob: dMobile, arg: String): Unit = {
+    def cmd_copyover(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {
 //       FILE *fp;
 //       ITERATOR Iter;
 //       D_SOCKET *dsock;
@@ -169,10 +169,10 @@ object ActionSafe
 //       text_to_mobile(dMob, "Copyover FAILED!\n\r");
     }
 
-    def cmd_linkdead(dMob: dMobile, arg: String): Unit = {
+    def cmd_linkdead(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {
         var found = false
 
-        for (xMob <- dmobile_list if !xMob.socket.isDefined) {
+        for (xMob <- mudSocket.dmobile_list if !xMob.socket.isDefined) {
             MudSocket.text_to_mobile(dMob, s"s{xMob.name} is linkdead.\n\r")
             found = true
         }

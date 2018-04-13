@@ -15,51 +15,12 @@ object Utils
      * Check to see if a given name is legal, returning FALSE if it fails our high standards...
      */
     def check_name(name: String): Boolean = {
-
-        if (name.length() < 3 || name.length() > 12) {
-            false
-        }
-        else {
-            for (c <- name.toCharArray()) {
-                if (!Character.isLetter(c)) {
-                    return false
-                }
-            }
-            true
-        }
+        name.length() >= 3 && name.length() <= 12 && !name.toCharArray().exists { !Character.isLetter(_) }
     }
 
-    // void clear_mobile(D_MOBILE *dMob)
-    // {
-    //   memset(dMob, 0, sizeof(*dMob));
-
-    //   dMob->name         =  NULL;
-    //   dMob->password     =  NULL;
-    //   dMob->level        =  LEVEL_PLAYER;
-    //   dMob->events       =  AllocList();
-    // }
-
     def free_mobile(dMob: dMobile): Unit = {
-        // EVENT_DATA *pEvent;
-        // ITERATOR Iter;
-
-        // DetachFromList(dMob, dmobile_list);
-
         dMob.socket.foreach { sock => sock.player = None }
-
-        // AttachIterator(&Iter, dMob->events);
-        // while ((pEvent = (EVENT_DATA *) NextInList(&Iter)) != NULL)
-        for (event <- dMob.events) {
-            EventHandler.dequeue_event(event)
-        }
-        // DetachIterator(&Iter);
-        // FreeList(dMob->events);
-
-        /* free allocated memory */
-        // free(dMob->name);
-        // free(dMob->password);
-
-        // PushStack(dMob, dmobile_free);
+        dMob.events.foreach { EventHandler.dequeue_event(_) }
     }
 
     def communicate(dMob: dMobile, txt: String, range: Int)(implicit dmobile_list: List[dMobile]): Unit = {

@@ -172,7 +172,7 @@ package object mud {
 
     case class typCmd(
         cmd_name: String,
-        cmd_funct: (dMobile, String) => Unit,
+        cmd_funct: (dMobile, String, MudSocket) => Unit,
         level: Int
     )
 

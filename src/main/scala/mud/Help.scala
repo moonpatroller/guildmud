@@ -2,7 +2,7 @@ package mud
 
 import mud._
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 import java.nio.file.{Files, Paths}
 
@@ -48,7 +48,7 @@ object Help
 
         val stream = Files.newDirectoryStream(Paths.get("./help/"))
         try {
-            for (file <- stream) {
+            for (file <- stream.iterator().asScala) {
                 println("help file " + file)
                 val fileBytes = Files.readAllBytes(file.getFileName())
                 if (fileBytes == null) {
