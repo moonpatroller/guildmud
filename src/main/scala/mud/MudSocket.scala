@@ -274,26 +274,24 @@ class MudSocket(mudPort: Int)
                     // Check for a new command
                     dsock.next_cmd_from_buffer()
 
-                    /* Is there a new command pending ? */
+                    // Is there a new command pending?
                     dsock.getNextCommand() foreach { next_command =>
-                        /* figure out how to deal with the incoming command */
+                        // deal with the incoming command
                         dsock.state match {
-                            case STATE_NEW_NAME | STATE_NEW_PASSWORD | STATE_VERIFY_PASSWORD | STATE_ASK_PASSWORD =>
+                            case NewName | NewPassword | VerifyPassword | AskPassword =>
                                 handle_new_connections(dsock, next_command)
-                            case STATE_PLAYING =>
+                            case Playing =>
                                 handle_cmd_input(dsock, next_command, this)
-                            _: Int =>
-                                IO.bug("Descriptor in bad state.")(dmobile_list)
                         }
                     }
 
                     /* if the player quits or get's disconnected */
-                    if (dsock.state != STATE_CLOSED) {
+                    if (dsock.state != Closed) {
                         flush_output(dsock)
                     }
                 }
             }
-            dsock_list.accumulateAndGet(Nil, (currentList: List[dSocket], updateList: List[dSocket]) => currentList.filter(_.state != STATE_CLOSED))
+            dsock_list.accumulateAndGet(Nil, (currentList: List[dSocket], updateList: List[dSocket]) => currentList.filter(_.state != Closed))
 
             eventHandler.heartbeat(this)
 
@@ -361,7 +359,7 @@ class MudSocket(mudPort: Int)
 
         try {
             // bust a prompt
-            if (dsock.state == STATE_PLAYING && dsock.bust_prompt) {
+            if (dsock.state == Playing && dsock.bust_prompt) {
                 text_to_buffer(dsock, "\n\rSocketMud:> ")
                 dsock.bust_prompt = false
             }
@@ -377,7 +375,7 @@ class MudSocket(mudPort: Int)
     def handle_new_connections(dsock: dSocket, arg: String): Unit = {
 
         dsock.state match {
-            case STATE_NEW_NAME =>
+            case NewName =>
                 if (!Utils.check_name(arg)) {
                     text_to_buffer(dsock, "Sorry, that's not a legal name, please pick another.")
                     return
@@ -391,12 +389,12 @@ class MudSocket(mudPort: Int)
                         case None => 
                             val mob = dMobile(Some(dsock), Nil, arg, "", LEVEL_PLAYER)
                             text_to_buffer(dsock, "Please enter a new password: ")
-                            dsock.state = STATE_NEW_PASSWORD
+                            dsock.state = dsock.state.toNewPassword()
                             mob
 
                         case Some(mob) =>
                             text_to_buffer(dsock, "What is your password? ")
-                            dsock.state = STATE_ASK_PASSWORD
+                            dsock.state = dsock.state.toAskPassword()
                             mob
                     }
                 }
@@ -406,7 +404,7 @@ class MudSocket(mudPort: Int)
                 playerMobile.socket = Some(dsock)
                 dsock.player = Some(playerMobile)
 
-            case STATE_NEW_PASSWORD =>
+            case NewPassword =>
                 if (arg.length() < 5 || arg.length() > 24) {
                     text_to_buffer(dsock, "Between 5 and 12 chars please!\n\rPlease enter a new password: ")
                     return
@@ -420,19 +418,18 @@ class MudSocket(mudPort: Int)
                 }
 
                 text_to_buffer(dsock, "Please verify the password: ")
-                dsock.state = STATE_VERIFY_PASSWORD
+                dsock.state = dsock.state.toVerifyPassword()
 
-            case STATE_VERIFY_PASSWORD =>
+            case VerifyPassword =>
                 if (Crypt.hashAsUtf8(arg) == dsock.player.get.password) {
                     text_to_buffer(dsock, DO_ECHO)
 
-                    /* put him in the list */
                     dmobile_list = dsock.player.get :: dmobile_list
 
                     IO.log_string(s"New player: ${dsock.player.get.name} has entered the game.")(dmobile_list)
 
-                    /* and into the game */
-                    dsock.state = STATE_PLAYING
+                    // and into the game
+                    dsock.state = dsock.state.toPlaying()
                     text_to_buffer(dsock, "This is the motd")
 
                     /* initialize events on the player */
@@ -444,10 +441,10 @@ class MudSocket(mudPort: Int)
                 else {
                     dsock.player.get.password = ""
                     text_to_buffer(dsock, "Password mismatch!\n\rPlease enter a new password: ")
-                    dsock.state = STATE_NEW_PASSWORD
+                    dsock.state = dsock.state.toNewPassword()
                 }
 
-            case STATE_ASK_PASSWORD =>
+            case AskPassword =>
                 text_to_buffer(dsock, DO_ECHO)
                 val playerName = if (dsock.player.isDefined) dsock.player.get.name else ""
                 val playerPassword = if (dsock.player.isDefined) dsock.player.get.password else ""
@@ -463,7 +460,7 @@ class MudSocket(mudPort: Int)
                         IO.log_string("%s has reconnected.", dsock.player.get.name)(dmobile_list)
 
                         /* and let him enter the game */
-                        dsock.state = STATE_PLAYING
+                        dsock.state = dsock.state.toPlaying()
                         text_to_buffer(dsock, "You take over a body already in use.\n\r")
 
                         /* strip the idle event from this socket */
@@ -490,7 +487,7 @@ class MudSocket(mudPort: Int)
                             IO.log_string(s"${dsock.player.get.name} has entered the game.")(dmobile_list)
 
                             /* and let him enter the game */
-                            dsock.state = STATE_PLAYING
+                            dsock.state = dsock.state.toPlaying()
                             text_to_buffer(dsock, "This is the motd")
 
                             /* initialize events on the player */
@@ -503,14 +500,9 @@ class MudSocket(mudPort: Int)
                 }
                 else {
                     text_to_socket(dsock, "Bad password!\n\r")
-                    // Utils.free_mobile(dsock.player.get)
-                    dsock.player = None
                     dsock.close_socket()
-                    dsock.state = STATE_CLOSED
+                    dsock.state = dsock.state.toClosed()
                 }
-
-            case _: Int =>
-                IO.bug("Handle_new_connections: Bad state.")(dmobile_list)
         }
     }
 

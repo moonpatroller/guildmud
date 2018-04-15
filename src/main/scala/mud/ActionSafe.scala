@@ -51,7 +51,7 @@ class ActionSafe(help: Help)
     def cmd_who(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {
         var buf = " - - - - ----==== Who's Online ====---- - - - -\n\r"
 
-        for (dsock <- mudSocket.dsock_list.get() if dsock.state == STATE_PLAYING) {
+        for (dsock <- mudSocket.dsock_list.get() if dsock.state == Playing) {
             dsock.player foreach { xMob =>
                 buf += f"${xMob.name}%-12s   ${dsock.hostname}\n\r"
             }
@@ -89,26 +89,6 @@ class ActionSafe(help: Help)
     }
 
     def cmd_compress(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {
-//       /* no socket, no compression */
-//       if (!dMob->socket)
-//         return;
-
-//       /* enable compression */
-//       if (!dMob->socket->out_compress)
-//       {
-//         text_to_mobile(dMob, "Trying compression.\n\r");
-//         text_to_buffer(dMob->socket, (char *) compress_will2);
-//         text_to_buffer(dMob->socket, (char *) compress_will);
-//       }
-//       else /* disable compression */
-//       {
-//         if (!compressEnd(dMob->socket, dMob->socket->compressing, FALSE))
-//         {
-//           text_to_mobile(dMob, "Failed.\n\r");
-//           return;
-//         }
-//         text_to_mobile(dMob, "Compression disabled.\n\r");
-//       }
     }
 
     def cmd_save(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {
@@ -117,59 +97,6 @@ class ActionSafe(help: Help)
     }
 
     def cmd_copyover(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {
-//       FILE *fp;
-//       ITERATOR Iter;
-//       D_SOCKET *dsock;
-//       char buf[MAX_BUFFER];
-      
-//       if ((fp = fopen(COPYOVER_FILE, "w")) == NULL)
-//       {
-//         text_to_mobile(dMob, "Copyover file not writeable, aborted.\n\r");
-//         return;
-//       }
-
-//       snprintf(buf, sizeof(buf), "%s", "\n\r <*>            The world starts spinning             <*>\n\r");
-
-//       /* For each playing descriptor, save its state */
-//       AttachIterator(&Iter, dsock_list);
-//       while ((dsock = (D_SOCKET *) NextInList(&Iter)) != NULL)
-//       {
-//         compressEnd(dsock, dsock->compressing, FALSE);
-
-//         if (dsock->state != STATE_PLAYING)
-//         {
-//           text_to_socket(dsock, "\n\rSorry, we are rebooting. Come back in a few minutes.\n\r");
-//           close_socket(dsock, FALSE);
-//         }
-//         else
-//         {
-//           fprintf(fp, "%d %s %s\n",
-//             dsock->control, dsock->player->name, dsock->hostname);
-
-//           /* save the player */
-//           save_player(dsock->player);
-
-//           text_to_socket(dsock, buf);
-//         }
-//       }
-//       DetachIterator(&Iter);
-
-//       fprintf (fp, "-1\n");
-//       fclose (fp);
-
-//       /* close any pending sockets */
-//       recycle_sockets();
-      
-//       /*
-//        * feel free to add any additional arguments between the 2nd and 3rd,
-//        * that is "SocketMud" and buf, but leave the last three in that order,
-//        * to ensure that the main() function can parse the input correctly.
-//        */
-//       snprintf(buf, MAX_BUFFER, "%d", control);
-//       execl(EXE_FILE, "SocketMud", buf, "copyover", (char *) NULL);
-
-//       /* Failed - sucessful exec will not return */
-//       text_to_mobile(dMob, "Copyover FAILED!\n\r");
     }
 
     def cmd_linkdead(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {

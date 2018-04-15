@@ -24,12 +24,33 @@ package object mud {
     val MUDPORT           =  9009                   /* just set whatever port you want    */
 
     /* Connection states */
-    val STATE_NEW_NAME        = 0
-    val STATE_NEW_PASSWORD    = 1
-    val STATE_VERIFY_PASSWORD = 2
-    val STATE_ASK_PASSWORD    = 3
-    val STATE_PLAYING         = 4
-    val STATE_CLOSED          = 5
+    trait ConnStatus {
+        def toAskPassword() = this
+        def toClosed() = this
+        def toNewPassword() = this
+        def toPlaying() = this
+        def toVerifyPassword() = this
+    }
+    case object NewName extends ConnStatus {
+        override def toNewPassword() = NewPassword
+        override def toAskPassword() = AskPassword
+    }
+    case object NewPassword extends ConnStatus {
+        override def toVerifyPassword() = VerifyPassword
+    }
+    case object VerifyPassword extends ConnStatus {
+        override def toNewPassword() = NewPassword
+        override def toPlaying() = Playing
+    }
+    case object AskPassword extends ConnStatus {
+        override def toClosed() = Closed
+        override def toPlaying() = Playing
+    }
+    case object Playing extends ConnStatus {
+        override def toClosed() = Closed
+    }
+    case object Closed extends ConnStatus {
+    }
 
     /* player levels */
     val LEVEL_GUEST           = 1  /* Dead players and actual guests  */
@@ -52,26 +73,6 @@ package object mud {
     def UMIN(a: Int, b: Int) = if (a < b) a else b
 
     def IS_ADMIN(dMob: dMobile) = dMob.level > LEVEL_PLAYER
-
-    // val IREAD(sKey, sPtr)             \
-    // {                                     \
-    //   if (!strcasecmp(sKey, word))        \
-    //   {                                   \
-    //     int sValue = fread_number(fp);    \
-    //     sPtr = sValue;                    \
-    //     found = TRUE;                     \
-    //     break;                            \
-    //   }                                   \
-    // }
-    // val SREAD(sKey, sPtr)             \
-    // {                                     \
-    //   if (!strcasecmp(sKey, word))        \
-    //   {                                   \
-    //     sPtr = fread_string(fp);          \
-    //     found = TRUE;                     \
-    //     break;                            \
-    //   }                                   \
-    // }
 
     /***********************
      * End of Macros       *
@@ -98,12 +99,6 @@ package object mud {
         text: String
     )
 
-    case class LookupData(
-        dsock: dSocket,     /* the socket we wish to do a hostlookup on */
-        // struct sockaddr    *sa;
-        // java.net.Socket?
-    )
-
     case class BufferType(
         data: Array[Byte],  /* The data                      */
         len: Int,           /* The current len of the buffer */
@@ -118,9 +113,7 @@ package object mud {
 
 
     val actionSafe = new ActionSafe(new Help("./help/"))
-    /*
-     * The command table, very simple, but easy to extend.
-     */
+
     val tabCmd = Array(
         /* command          function        Req. Level   */
         /* --------------------------------------------- */

@@ -14,7 +14,7 @@ object dSocket {
             "",
             "",
             false,
-            STATE_NEW_NAME,
+            NewName,
             sock
             // 0,
             // 0,
@@ -31,7 +31,7 @@ case class dSocket(
     var hostname: String,
     var inbuf: String, // or maybe a byte array instead?? Array[Byte], // [MAX_BUFFER];
     var bust_prompt: Boolean,
-    var state: Int,
+    var state: ConnStatus,
     control: Socket
     // var top_output: Int,
     // compressing: Int,                   /* MCCP support */
@@ -112,7 +112,6 @@ case class dSocket(
             inbuf = inbuf.substring(1)
             bust_prompt = true
         }
-        // bust_prompt = true
     }
 
     /*
@@ -121,7 +120,7 @@ case class dSocket(
     def close_socket(): Unit = {
         IO.log_string(s"Closing link to ${if (player.isDefined) player.get.name else this}")(Nil)
         control.close()
-        state = STATE_CLOSED
+        state = Closed
     }
 
 }
