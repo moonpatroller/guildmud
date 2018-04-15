@@ -5,18 +5,18 @@ import javax.crypto._
 
 object Crypt
 {
-    def encrypt(toEncrypt: String, key: String): Array[Byte] = {
-        val secureRandom = new SecureRandom(key.getBytes())
-        val keyGenerator = KeyGenerator.getInstance("AES")
-        keyGenerator.init(secureRandom)
-        val secretKey = keyGenerator.generateKey()
-
-        val cipher = Cipher.getInstance("twofish")
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey)
-        cipher.doFinal(toEncrypt.getBytes())
+    def hash(input: String): Array[Byte] = {
+        val md = MessageDigest.getInstance("SHA-1")
+        md.update(input.getBytes())
+        md.digest()
     }
 
-    def encryptAsUtf8(toEncrypt: String, key: String): String = {
-        new String(encrypt(toEncrypt, key), "UTF-8")
+    def hashAsUtf8(input: String): String = {
+        val byteData = hash(input)
+        val sb = new StringBuffer()
+        for (i <- 0 until byteData.length) {
+            sb.append(Integer.toString((byteData(i) & 0xff) + 0x100, 16).substring(1))
+        }
+        sb.toString()
     }
 }

@@ -3,12 +3,13 @@ package mud
 import mud._
 import Event._
 
-object EventHandler
+class EventHandler()
 {
     var eventqueue = Array.fill[List[EventData]](MAX_EVENT_HASH)(Nil)
-    // STACK *event_free = NULL;
     var global_events = List[EventData]()
     var current_bucket = 0
+
+    add_event_game(EventData(event_game_tick, EVENT_GAME_TICK), 10 * 60 * PULSES_PER_SECOND)
 
 
     /* function   :: enqueue_event()
@@ -84,67 +85,6 @@ object EventHandler
         event.argument = null
     }
 
-    // /* function   :: alloc_event()
-    //  * arguments  :: none
-    //  * ======================================================
-    //  * This function allocates memory for an event, and
-    //  * makes sure it's values are set to default.
-    //  */
-    // EVENT_DATA *alloc_event()
-    // {
-    //   EVENT_DATA *event;
-
-    //   if (StackSize(event_free) <= 0)
-    //     event = (EVENT_DATA *) malloc(sizeof(*event));
-    //   else
-    //     event = (EVENT_DATA *) PopStack(event_free);
-
-    //   /* clear the event */
-    //   event->fun        = NULL;
-    //   event->argument   = NULL;
-    //   event->owner.dMob = NULL;  /* only need to NULL one of the union members */
-    //   event->passes     = 0;
-    //   event->bucket     = 0;
-    //   event->ownertype  = EVENT_UNOWNED;
-    //   event->type       = EVENT_NONE;
-
-    //   /* return the allocated and cleared event */
-    //   return event;
-    // }
-
-    // /* function   :: init_event_queue()
-    //  * arguments  :: what section to initialize.
-    //  * ======================================================
-    //  * This function is used to initialize the event queue,
-    //  * and the first section should be initialized at boot,
-    //  * the second section should be called after all areas,
-    //  * players, monsters, etc has been loaded into memory,
-    //  * and it should contain all maintanence events.
-    //  */
-    // void init_event_queue(int section)
-    // {
-    //   EVENT_DATA *event;
-    //   int i;
-
-    //   if (section == 1)
-    //   {
-    //     for (i = 0; i < MAX_EVENT_HASH; i++)
-    //     {
-    //       eventqueue[i] = AllocList();
-    //     }
-
-    //     event_free = AllocStack();
-    //     global_events = AllocList();
-    //   }
-    //   else if (section == 2)
-    //   {
-    //     event = alloc_event();
-    //     event->fun = &event_game_tick;
-    //     event->type = EVENT_GAME_TICK;
-    //     add_event_game(event, 10 * 60 * PULSES_PER_SECOND);
-    //   }
-    // }
-
     /* function   :: heartbeat()
      * arguments  :: none
      * ======================================================
@@ -152,7 +92,7 @@ object EventHandler
      * check the queue, and execute any pending events, which
      * has been enqueued to execute at this specific time.
      */
-    def heartbeat(): Unit = {
+    def heartbeat(mudSocket: MudSocket): Unit = {
         /* current_bucket should be global, it is also used in enqueue_event
         * to figure out what bucket to place the new event in.
         */
@@ -172,7 +112,7 @@ object EventHandler
                  * Any event returning TRUE is not dequeued, it is assumed
                  * that the event has dequeued itself.
                  */
-                if (!event.fun(event)) {
+                if (!event.fun(event, mudSocket)) {
                     dequeue_event(event)
                 }
             }
@@ -248,39 +188,37 @@ object EventHandler
         }
     }
 
-    // /* function   :: add_event_game()
-    //  * arguments  :: the event and the delay
-    //  * ======================================================
-    //  * This funtion attaches an event to the list og game
-    //  * events, and makes sure it's enqueued with the correct
-    //  * delay time.
-    //  */
-    // void add_event_game(EVENT_DATA *event, int delay)
-    // {
-    //   /* check to see if the event has a type */
-    //   if (event->type == EVENT_NONE)
-    //   {
-    //     bug("add_event_game: no type.");
-    //     return;
-    //   }
+    /* function   :: add_event_game()
+     * arguments  :: the event and the delay
+     * ======================================================
+     * This funtion attaches an event to the list og game
+     * events, and makes sure it's enqueued with the correct
+     * delay time.
+     */
+    def add_event_game(event: EventData, delay: Int): Unit = {
+        /* check to see if the event has a type */
+        if (event.typ == EVENT_NONE) {
+            IO.bug("add_event_game: no type.")(Nil)
+            return
+        }
 
-    //   /* check to see of the event has a callback function */
-    //   if (event->fun == NULL)
-    //   {
-    //     bug("add_event_game: event type %d has no callback function.", event->type);
-    //     return;
-    //   }
+        /* check to see of the event has a callback function */
+        if (event.fun == null) {
+            IO.bug(s"add_event_game: event type ${event.typ} has no callback function.")(Nil)
+            return
+        }
 
-    //   /* set the correct variables for this event */
-    //   event->ownertype = EVENT_OWNER_GAME;
+        /* set the correct variables for this event */
+        event.ownertype = EVENT_OWNER_GAME
 
-    //   /* attach the event to the gamelist */
-    //   AttachToList(event, global_events);
+        /* attach the event to the gamelist */
+        global_events = event :: global_events
 
-    //   /* attempt to enqueue the event */
-    //   if (enqueue_event(event, delay) == FALSE)
-    //     bug("add_event_game: event type %d failed to be enqueued.", event->type);
-    // }
+        /* attempt to enqueue the event */
+        if (enqueue_event(event, delay) == false) {
+            IO.bug(s"add_event_game: event type ${event.typ} failed to be enqueued.")(Nil)
+        }
+    }
 
     // /* function   :: event_isset_socket()
     //  * arguments  :: the socket and the type of event

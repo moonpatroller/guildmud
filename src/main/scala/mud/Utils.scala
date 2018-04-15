@@ -18,60 +18,33 @@ object Utils
         name.length() >= 3 && name.length() <= 12 && !name.toCharArray().exists { !Character.isLetter(_) }
     }
 
-    def free_mobile(dMob: dMobile): Unit = {
-        dMob.socket.foreach { sock => sock.player = None }
-        dMob.events.foreach { EventHandler.dequeue_event(_) }
-    }
+    // def free_mobile(dMob: dMobile, eventHandler: EventHandler): Unit = {
+    //     dMob.socket.foreach { sock => sock.player = None }
+    //     dMob.events.foreach { eventHandler.dequeue_event(_) }
+    // }
 
     def communicate(dMob: dMobile, txt: String, range: Int)(implicit dmobile_list: List[dMobile]): Unit = {
-        // D_MOBILE *xMob;
-        // ITERATOR Iter;
-        // char buf[MAX_BUFFER];
-        // char message[MAX_BUFFER];
-
         range match {
             case COMM_LOCAL =>  /* everyone is in the same room for now... */
                 val message = s"${dMob.name} says '${txt}'.\n\r"
                 val buf = s"You say '${txt}'.\n\r"
                 MudSocket.text_to_mobile(dMob, buf)
 
-                // AttachIterator(&Iter, dmobile_list)
-                // while ((xMob = (D_MOBILE *) NextInList(&Iter)) != NULL) {
-                for (xMob <- dmobile_list) {
-                    if (xMob != dMob) {
-                        MudSocket.text_to_mobile(xMob, message)
-                    }
+                for (xMob <- dmobile_list if xMob != dMob) {
+                    MudSocket.text_to_mobile(xMob, message)
                 }
-                // DetachIterator(&Iter)
 
             case COMM_LOG =>
                 val message = s"[LOG: ${txt}]\n\r"
 
-                // AttachIterator(&Iter, dmobile_list);
-                // while ((xMob = (D_MOBILE *) NextInList(&Iter)) != NULL)
-                for (xMob <- dmobile_list) {
-                    if (IS_ADMIN(xMob)) {
-                        MudSocket.text_to_mobile(xMob, message);
-                    }
+                for (xMob <- dmobile_list if IS_ADMIN(xMob)) {
+                    MudSocket.text_to_mobile(xMob, message);
                 }
-                // DetachIterator(&Iter);
-
+ 
             _: Int =>
                 IO.bug("Communicate: Bad Range %d.", range)
         }
     }
-
-    // /*
-    //  * Loading of help files, areas, etc, at boot time.
-    //  */
-    // void load_muddata(bool fCopyOver)
-    // {
-    //   load_helps();
-
-    //   /* copyover */
-    //   if (fCopyOver)
-    //     copyover_recover();
-    // }
 
     def get_timestamp(): String = {
         // TODO: this used external current_time, so make this have current time passed in to be more functional
@@ -84,74 +57,4 @@ object Utils
         java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"))
     }
 
-    // /* Recover from a copyover - load players */
-    // void copyover_recover()
-    // {
-    //   D_MOBILE *dMob;
-    //   D_SOCKET *dsock;
-    //   FILE *fp;
-    //   char name [100];
-    //   char host[MAX_BUFFER];
-    //   int desc;
-
-    //   log_string("Copyover recovery initiated");
-
-    //   if ((fp = fopen(COPYOVER_FILE, "r")) == NULL)
-    //   {
-    //     log_string("Copyover file not found. Exitting.");
-    //     exit (1);
-    //   }
-
-    //   /* In case something crashes - doesn't prevent reading */
-    //   unlink(COPYOVER_FILE);
-
-    //   for (;;)
-    //   {
-    //     fscanf(fp, "%d %s %s\n", &desc, name, host);
-    //     if (desc == -1)
-    //       break;
-
-    //     dsock = (D_SOCKET *) malloc(sizeof(*dsock));
-    //     clear_socket(dsock, desc);
-
-    //     dsock->hostname     =  strdup(host);
-    //     AttachToList(dsock, dsock_list);
-
-    //     /* load player data */
-    //     if ((dMob = load_player(name)) != NULL)
-    //     {
-    //       /* attach to socket */
-    //       dMob->socket     =  dsock;
-    //       dsock->player    =  dMob;
-
-    //       /* attach to mobile list */
-    //       AttachToList(dMob, dmobile_list);
-
-    //       /* initialize events on the player */
-    //       init_events_player(dMob);
-    //     }
-    //     else /* ah bugger */
-    //     {
-    //       close_socket(dsock, FALSE);
-    //       continue;
-    //     }
-
-    //     /* Write something, and check if it goes error-free */
-    //     if (!text_to_socket(dsock, "\n\r <*>  And before you know it, everything has changed  <*>\n\r"))
-    //     {
-    //       close_socket(dsock, FALSE);
-    //       continue;
-    //     }
-
-    //     /* make sure the socket can be used */
-    //     dsock->bust_prompt    =  TRUE;
-    //     dsock->lookup_status  =  TSTATE_DONE;
-    //     dsock->state          =  STATE_PLAYING;
-
-    //     /* negotiate compression */
-    //     text_to_buffer(dsock, (char *) compress_will2);
-    //     text_to_buffer(dsock, (char *) compress_will);
-    //   }
-    //   fclose(fp);
-    // }
 }

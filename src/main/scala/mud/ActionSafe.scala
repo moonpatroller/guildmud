@@ -2,7 +2,7 @@ package mud
 
 import mud._
 
-object ActionSafe
+class ActionSafe(help: Help)
 {
     /*
      * This file handles non-fighting player actions.
@@ -18,14 +18,14 @@ object ActionSafe
 
     def cmd_quit(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {
         /* log the attempt */
-        val buf = s"s{dMob.name} has left the game."
+        val buf = s"${dMob.name} has left the game."
         IO.log_string(buf)(Nil)
 
         Save.save_player(dMob)
 
         dMob.socket.foreach(_.player = None)
-        Utils.free_mobile(dMob)
-        dMob.socket foreach { MudSocket.close_socket(_, false) }
+        // Utils.free_mobile(dMob)
+        dMob.socket foreach { _.close_socket() }
     }
 
     def cmd_shutdown(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {
@@ -36,7 +36,7 @@ object ActionSafe
         var col = 0
         var buf = "    - - - - ----==== The full command list ====---- - - - -\n\n\r"
         for (cmd <- tabCmd if dMob.level >= cmd.level) {
-            buf += s" %-16.16s s{cmd.cmd_name}"
+            buf += s" %-16.16s ${cmd.cmd_name}"
             col += 1
             if (col % 4 == 0) {
                 buf += "\n\r"
@@ -53,7 +53,7 @@ object ActionSafe
 
         for (dsock <- mudSocket.dsock_list.get() if dsock.state == STATE_PLAYING) {
             dsock.player foreach { xMob =>
-                buf += s" %-12s s{xMob.name}   ${dsock.hostname}\n\r"
+                buf += s" %-12s ${xMob.name}   ${dsock.hostname}\n\r"
             }
         }
 
@@ -66,8 +66,8 @@ object ActionSafe
             var col = 0
             var buf = "      - - - - - ----====//// HELP FILES  \\\\\\\\====---- - - - - -\n\n\r"
 
-            for (pHelp <- Help.help_list) {
-                buf += s" %-19.18s s{pHelp.keyword}"
+            for (pHelp <- help.helpFiles) {
+                buf += s" %-19.18s ${pHelp.keyword}"
                 col += 1
                 if (col % 4 == 0) {
                     buf += "\n\r"
@@ -80,8 +80,11 @@ object ActionSafe
             buf += "\n\r Syntax: help <topic>\n\r"
             MudSocket.text_to_mobile(dMob, buf)
         }
-        else if (!Help.check_help(dMob, arg)) {
-            MudSocket.text_to_mobile(dMob, "Sorry, no such helpfile.\n\r")
+        else {
+            help.getHelp(arg) match {
+                case Some(HelpData(keyword, _, text)) => MudSocket.text_to_mobile(dMob, s"=== ${keyword} ===\n\r${text}")
+                case None => MudSocket.text_to_mobile(dMob, "Sorry, no such helpfile.\n\r")
+            }
         }
     }
 
@@ -173,7 +176,7 @@ object ActionSafe
         var found = false
 
         for (xMob <- mudSocket.dmobile_list if !xMob.socket.isDefined) {
-            MudSocket.text_to_mobile(dMob, s"s{xMob.name} is linkdead.\n\r")
+            MudSocket.text_to_mobile(dMob, s"${xMob.name} is linkdead.\n\r")
             found = true
         }
 

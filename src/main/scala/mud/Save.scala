@@ -25,7 +25,9 @@ object Save
 
 
     def save_player(dMob: dMobile): Unit = {
-        val br = Files.newBufferedWriter(Paths.get("./data/players/" + dMob.name), Charset.forName("US-ASCII"))
+        val playerPath = Paths.get("./data/players/" + dMob.name)
+        Files.createDirectories(playerPath.getParent());
+        val br = Files.newBufferedWriter(playerPath, Charset.forName("US-ASCII"))
         try {
             br.write(dMob.asJson.spaces4)
         } finally {
@@ -34,8 +36,13 @@ object Save
     }
 
     def load_player(playerName: String): Option[dMobile] = {
-        val s = new String(Files.readAllBytes(Paths.get("./data/players/" + playerName)), StandardCharsets.UTF_8)
-        s.decodeOption[dMobile]
+        val playerPath = Paths.get("./data/players/" + playerName)
+        if (Files.exists(playerPath)) {
+            val s = new String(Files.readAllBytes(playerPath), StandardCharsets.UTF_8)
+            s.decodeOption[dMobile]
+        } else {
+            None
+        }
     }
 
     def load_profile = load_player(_)

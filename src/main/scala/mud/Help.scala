@@ -3,69 +3,39 @@ package mud
 import mud._
 
 import scala.collection.JavaConverters._
+import scala.util.Sorting
 
 import java.nio.file.{Files, Paths}
 
-/*
- * This file contains the dynamic help system.
- * If you wish to update a help file, simply edit
- * the entry in ../help/ and the mud will load the
- * new version next time someone tries to access
- * that help file.
- */
-object Help
+class Help(dirPath: String)
 {
-    var help_list = List[HelpData]()  /* the linked list of help files     */
-    var greeting = ""               /* the welcome greeting              */
-    var motd = ""                   /* the MOTD help file                */
+    var helpFiles = loadHelpFiles()
+    var greeting = getHelp("greeting")
+    var motd = getHelp("motd")
 
-    /*
-     * Check_help()
-     *
-     * This function first sees if there is a valid
-     * help file in the help_list, should there be
-     * no helpfile in the help_list, it will check
-     * the ../help/ directory for a suitable helpfile
-     * entry. Even if it finds the helpfile in the
-     * help_list, it will still check the ../help/
-     * directory, and should the file be newer than
-     * the currently loaded helpfile, it will reload
-     * the helpfile.
+    /**
+     * TODO: convert to binary search?  Add auto-reloading?
      */
-    def check_help(dMob: dMobile, helpfile: String): Boolean = {
-        help_list find { _.keyword.startsWith(helpfile) } foreach { pHelp =>
-            MudSocket.text_to_mobile(dMob, s"=== s{pHelp.keyword} ===\n\rs{pHelp.text}")
-        }
-        true
+    def getHelp(search: String): Option[HelpData] = {
+        helpFiles find { _.keyword.toUpperCase().startsWith(search.toUpperCase()) }
     }
 
-    /*
-     * Loads all the helpfiles found in ../help/
+    /**
+     * Loads all files in dirPath
      */
-    def load_helps(): Unit = {
-
-        IO.log_string("Load_helps: getting all help files.")(Nil)
-
-        val stream = Files.newDirectoryStream(Paths.get("./help/"))
+    def loadHelpFiles(): Array[HelpData] = {
+        val stream = Files.newDirectoryStream(Paths.get(dirPath))
         try {
-            for (file <- stream.iterator().asScala) {
-                println("help file " + file)
-                val fileBytes = Files.readAllBytes(file.getFileName())
-                if (fileBytes == null) {
-                    IO.bug(s"load_helps: Helpfile ${file.getFileName()} does not exist.")(Nil)
-                }
-                else {
-                    val new_help = HelpData(file.getFileName().toString(), new String(fileBytes, "UTF-8"))
-                    help_list = new_help :: help_list
-
-                    if ("GREETING" == new_help.keyword) {
-                        // greeting = new_help.text
-                    }
-                    else if ("MOTD" == new_help.keyword) {
-                        // motd = new_help.text
-                    }
-                }
-            }
+            val helpDataList =
+                for (file <- stream.iterator().asScala;
+                    fileModTime = Files.getLastModifiedTime(file).toMillis();
+                    fileBytes <- Option(Files.readAllBytes(file));
+                    fileName = file.getFileName().toString();
+                    helpData = HelpData(fileName, fileModTime, new String(fileBytes, "UTF-8"))
+                ) yield helpData
+            val ary = helpDataList.toArray
+            Sorting.quickSort(ary)(Ordering.by[HelpData, String](_.keyword))
+            ary
         } finally {
             stream.close()
         }

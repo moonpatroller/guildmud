@@ -42,7 +42,7 @@ object Event
     val EVENT_GAME_TICK     =   1
 
     /* the event prototype */
-    type EventFun = (EventData) => Boolean
+    type EventFun = (EventData, MudSocket) => Boolean
 
     /* the event structure */
     object EventData {
@@ -68,29 +68,18 @@ object Event
     /* event_game_tick is just to show how to make global events
      * which can be used to update the game.
      */
-    // bool event_game_tick(EVENT_DATA *event)
-    // {
-    //   ITERATOR Iter;
-    //   D_MOBILE *dMob;
+    def event_game_tick(event: EventData, mudSocket: MudSocket): Boolean = {
+        for (dMob <- mudSocket.dmobile_list) {
+            MudSocket.text_to_mobile(dMob, "Tick!\n\r")
+        }
 
-    //   /* send a tick message to everyone */
-    //   AttachIterator(&Iter, dmobile_list);
-    //   while ((dMob = (D_MOBILE *) NextInList(&Iter)) != NULL)
-    //   {
-    //     text_to_mobile(dMob, "Tick!\n\r");
-    //   }
-    //   DetachIterator(&Iter);
+        /* enqueue another game tick in 10 minutes */
+        mudSocket.eventHandler.add_event_game(EventData(event_game_tick, EVENT_GAME_TICK), 10 * 60 * PULSES_PER_SECOND)
 
-    //   /* enqueue another game tick in 10 minutes */
-    //   event = alloc_event();
-    //   event->fun = &event_game_tick;
-    //   event->type = EVENT_GAME_TICK;
-    //   add_event_game(event, 10 * 60 * PULSES_PER_SECOND);
+        false
+    }
 
-    //   return FALSE;
-    // }
-
-    def event_mobile_save(event: EventData): Boolean = {
+    def event_mobile_save(event: EventData, mudSocket: MudSocket): Boolean = {
 
         /* Check to see if there is an owner of this event.
         * If there is no owner, we return TRUE, because
@@ -107,22 +96,24 @@ object Event
 
                 /* enqueue a new event to save the pfile in 2 minutes */
                 val event = EventData(event_mobile_save, EVENT_MOBILE_SAVE)
-                EventHandler.add_event_mobile(event, dMob, 2 * 60 * PULSES_PER_SECOND)
+                mudSocket.eventHandler.add_event_mobile(event, dMob, 2 * 60 * PULSES_PER_SECOND)
 
                 return false
         }
     }
 
-    def event_socket_idle(event: EventData): Boolean = {
+    def event_socket_idle(event: EventData, mudSocket: MudSocket): Boolean = {
         /* Check to see if there is an owner of this event.
         * If there is no owner, we return TRUE, because
         * it's the safest - and post a bug message.
         */
         event.owner match {
             case Some(Left(mob)) if mob.socket.isDefined => 
-                /* tell the socket that it has idled out, and close it */
-                MudSocket.text_to_socket(mob.socket.get, "You have idled out...\n\n\r")
-                MudSocket.close_socket(mob.socket.get, false)
+                // tell the socket that it has idled out, and close it
+                mob.socket foreach { sock =>
+                    MudSocket.text_to_socket(sock, "You have idled out...\n\n\r")
+                    sock.close_socket()
+                }
 
                 /* since we closed the socket, all events owned
                 * by that socket has been dequeued, and we need
