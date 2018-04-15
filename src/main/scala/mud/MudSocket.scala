@@ -69,12 +69,8 @@ object MudSocket
      */
     def text_to_buffer(dsock: dSocket, txt: String): Unit = {
 
-        /* always start with a leading space */
-        if (dsock.top_output == 0)
-        {
-            dsock.appendOutput("\n\r")
-            dsock.top_output = 2
-        }
+        // always start with a leading space
+        dsock.appendOutput("\n\r")
 
         val buffer = new StringBuilder()
         val outputBytes = txt.toCharArray()
@@ -191,7 +187,6 @@ object MudSocket
 
         /* add data to buffer */
         dsock.appendOutput(buffer.toString())
-        dsock.top_output += buffer.length()
     }
 
     /*
@@ -215,11 +210,13 @@ object MudSocket
                     case _ => ("", "")
                 }
 
-            tabCmd find { cmd => 
-                cmd.level <= mob.level && cmd.cmd_name.startsWith(first) 
-            } match {
-                case Some(cmd) => cmd.cmd_funct(mob, rest, mudSocket)
-                case None => text_to_mobile(mob, "No such command.\n\r")
+            if (first != "") {
+                tabCmd find { cmd => 
+                    cmd.level <= mob.level && cmd.cmd_name.startsWith(first)
+                } match {
+                    case Some(cmd) => cmd.cmd_funct(mob, rest, mudSocket)
+                    case None => text_to_mobile(mob, "No such command.\n\r")
+                }
             }
         }
     }
@@ -249,15 +246,17 @@ class MudSocket(mudPort: Int)
         var last_time = System.currentTimeMillis()
 
         /* check for new connections */
-        new Thread(new Runnable() {
+        val acceptThread = new Thread(new Runnable() {
             def run(): Unit = {
                 while (!shut_down.get()) {
                     new_socket(control.accept())
                 }
             }
-        }).start()
+        })
+        acceptThread.setDaemon(true)
+        acceptThread.start()
 
-        /* do this untill the program is shutdown */
+        // do this untill the program is shutdown
         while (!shut_down.get())
         {
             /* set current_time */
@@ -272,7 +271,7 @@ class MudSocket(mudPort: Int)
                     dsock.close_socket()
                 }
                 else {
-                    /* Ok, check for a new command */
+                    // Check for a new command
                     dsock.next_cmd_from_buffer()
 
                     /* Is there a new command pending ? */
@@ -311,12 +310,16 @@ class MudSocket(mudPort: Int)
             val msPerPulse = 1000 / PULSES_PER_SECOND
             val sleepTime = msPerPulse - dtMs
             if (sleepTime > 0) {
-                IO.log_string(s"Sleeping for ${sleepTime}ms.")(dmobile_list)
+                IO.log_string(s"Sleeping for ${sleepTime}ms.")(Nil)
                 Thread.sleep(sleepTime)
             }
 
             last_time = System.currentTimeMillis()
         }
+        println("Shutting down...")
+        dsock_list.get() foreach { _.close_socket() }
+        control.close()
+        println("Shut down.")
     }
 
     /*
@@ -331,10 +334,8 @@ class MudSocket(mudPort: Int)
         val sock_new = dSocket(sock)
 
         /* update the linked list of sockets */
-        // dsock_list.set(sock_new :: dsock_list.get())
         dsock_list.accumulateAndGet(List(sock_new), (currentList: List[dSocket], updateList: List[dSocket]) => updateList ::: currentList)
 
-        /* do a host lookup */
         sock_new.hostname = sock.getInetAddress().getHostName()
 
         /* negotiate compression */
@@ -354,8 +355,7 @@ class MudSocket(mudPort: Int)
     }
 
     def flush_output(dsock: dSocket): Unit = {
-        // if (dsock.top_output <= 0 && !(dsock.bust_prompt && dsock.state == STATE_PLAYING)) {
-        if (!dsock.hasOutputBuffered()) {
+        if (!dsock.bust_prompt && !dsock.hasOutputBuffered()) {
             return
         }
 
@@ -365,9 +365,6 @@ class MudSocket(mudPort: Int)
                 text_to_buffer(dsock, "\n\rSocketMud:> ")
                 dsock.bust_prompt = false
             }
-
-            // reset the top pointer
-            dsock.top_output = 0
 
             dsock.popOutput() foreach { text_to_socket(dsock, _) }
         } catch {
@@ -381,7 +378,6 @@ class MudSocket(mudPort: Int)
 
         dsock.state match {
             case STATE_NEW_NAME =>
-                /* check for a legal name */
                 if (!Utils.check_name(arg)) {
                     text_to_buffer(dsock, "Sorry, that's not a legal name, please pick another.")
                     return
@@ -411,7 +407,7 @@ class MudSocket(mudPort: Int)
                 dsock.player = Some(playerMobile)
 
             case STATE_NEW_PASSWORD =>
-                if (arg.length() < 5 || arg.length() > 12) {
+                if (arg.length() < 5 || arg.length() > 24) {
                     text_to_buffer(dsock, "Between 5 and 12 chars please!\n\rPlease enter a new password: ")
                     return
                 }
