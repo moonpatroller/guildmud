@@ -29,14 +29,14 @@ class ActionSafe(help: Help)
     }
 
     def cmd_shutdown(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {
-        // shut_down = true
+        mudSocket.shut_down.set(true)
     }
 
     def cmd_commands(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {
         var col = 0
         var buf = "    - - - - ----==== The full command list ====---- - - - -\n\n\r"
         for (cmd <- tabCmd if dMob.level >= cmd.level) {
-            buf += s" %-16.16s ${cmd.cmd_name}"
+            buf += f"${cmd.cmd_name}%-16.16s"
             col += 1
             if (col % 4 == 0) {
                 buf += "\n\r"
@@ -53,7 +53,7 @@ class ActionSafe(help: Help)
 
         for (dsock <- mudSocket.dsock_list.get() if dsock.state == STATE_PLAYING) {
             dsock.player foreach { xMob =>
-                buf += s" %-12s ${xMob.name}   ${dsock.hostname}\n\r"
+                buf += f"${xMob.name}%-12s   ${dsock.hostname}\n\r"
             }
         }
 
@@ -67,7 +67,7 @@ class ActionSafe(help: Help)
             var buf = "      - - - - - ----====//// HELP FILES  \\\\\\\\====---- - - - - -\n\n\r"
 
             for (pHelp <- help.helpFiles) {
-                buf += s" %-19.18s ${pHelp.keyword}"
+                buf += f"${pHelp.keyword}%-19.18s"
                 col += 1
                 if (col % 4 == 0) {
                     buf += "\n\r"
