@@ -26,4 +26,19 @@ class MudSpec extends FlatSpec with Matchers {
     "The Crypt object" should "encryptAsUtf8" in {
         Crypt.hashAsUtf8("plaintext").length() should be >= 10
     }
+
+    "The Ansi object" should "convertColorCodes" in {
+        Ansi.convertColorCodes("") shouldBe ""
+        Ansi.convertColorCodes("a") shouldBe "a"
+        Ansi.convertColorCodes("d") shouldBe "d"
+        Ansi.convertColorCodes("#") shouldBe "#"
+        Ansi.convertColorCodes("##") shouldBe "#"
+        assert(Ansi.convertColorCodes("#b" ).toList === "\u001b[34m\u001b[0m".toList)
+        assert(Ansi.convertColorCodes("#ba").toList === "\u001b[34ma\u001b[0m".toList)
+        assert(Ansi.convertColorCodes("#b ").toList === "\u001b[34m \u001b[0m".toList)
+        assert(Ansi.convertColorCodes("#B" ).toList === "\u001b[1;34m\u001b[0m".toList)
+        assert(Ansi.convertColorCodes("#Ba").toList === "\u001b[1;34ma\u001b[0m".toList)
+        assert(Ansi.convertColorCodes("#B ").toList === "\u001b[1;34m \u001b[0m".toList)
+    }
+
 }

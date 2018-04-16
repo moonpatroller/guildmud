@@ -99,12 +99,6 @@ package object mud {
         text: String
     )
 
-    case class BufferType(
-        data: Array[Byte],  /* The data                      */
-        len: Int,           /* The current len of the buffer */
-        size: Int           /* The allocated size of data    */
-    )
-
     case class typCmd(
         cmd_name: String,
         cmd_funct: (dMobile, String, MudSocket) => Unit,

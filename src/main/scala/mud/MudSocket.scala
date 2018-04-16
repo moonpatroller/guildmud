@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 object MudSocket
 {
-    // /* mccp support */
+    // mccp support
     val COMPRESS_WILL  = new String(Array[Byte](IAC, WILL, TELOPT_COMPRESS ), "UTF-8")
     val COMPRESS_WILL2 = new String(Array[Byte](IAC, WILL, TELOPT_COMPRESS2), "UTF-8")
     val GMCP_WILL      = new String(Array[Byte](IAC, WILL, TELOPT_GMCP     ), "UTF-8")
@@ -18,10 +18,7 @@ object MudSocket
     val DONT_ECHO      = new String(Array[Byte](IAC, WILL, TELOPT_ECHO), "UTF-8")
 
     /*
-     * Text_to_mobile()
-     *
-     * If the mobile has a socket, then the data will
-     * be send to text_to_buffer().
+     * If the mobile has a socket, then the data will be send to text_to_buffer().
      */
     def text_to_mobile(dMob: dMobile, txt: String): Unit = {
         dMob.socket.foreach { sock =>
@@ -30,170 +27,17 @@ object MudSocket
         }
     }
 
-    /* the color struct */
-    case class sAnsiColor(
-        cTag: Char,
-        cString: String,
-        aFlag: Int
-    )
-
-    /* the color table... */
-    val ansiTable = Array(
-        sAnsiColor( 'd',  "30",  eTHIN ),
-        sAnsiColor( 'D',  "30",  eBOLD ),
-        sAnsiColor( 'r',  "31",  eTHIN ),
-        sAnsiColor( 'R',  "31",  eBOLD ),
-        sAnsiColor( 'g',  "32",  eTHIN ),
-        sAnsiColor( 'G',  "32",  eBOLD ),
-        sAnsiColor( 'y',  "33",  eTHIN ),
-        sAnsiColor( 'Y',  "33",  eBOLD ),
-        sAnsiColor( 'b',  "34",  eTHIN ),
-        sAnsiColor( 'B',  "34",  eBOLD ),
-        sAnsiColor( 'p',  "35",  eTHIN ),
-        sAnsiColor( 'P',  "35",  eBOLD ),
-        sAnsiColor( 'c',  "36",  eTHIN ),
-        sAnsiColor( 'C',  "36",  eBOLD ),
-        sAnsiColor( 'w',  "37",  eTHIN ),
-        sAnsiColor( 'W',  "37",  eBOLD ),
-        /* the end tag */
-        sAnsiColor( '\u0000',  "",   eTHIN )
-    )
-
     /*
-     * Text_to_buffer()
-     *
-     * Stores outbound text in a buffer, where it will
-     * stay untill it is flushed in the gameloop.
-     *
-     * Will also parse ANSI colors and other tags.
+     * Convert # codes to ANSI escape sequences
      */
-    def text_to_buffer(dsock: dSocket, txt: String): Unit = {
-
-        // always start with a leading space
+    def text_to_buffer(dsock: dSocket, text: String): Unit = {
+        // always start with a leading new line
         dsock.appendOutput("\n\r")
-
-        val buffer = new StringBuilder()
-        val outputBytes = txt.toCharArray()
-        var index = 0
-        var underline = false
-        var bold = false
-        var last = -1
-        while (index < outputBytes.length - 1) {
-
-            outputBytes(index) match {
-                case '#' =>
-                    index += 1
-                    outputBytes(index) match {
-                        case c @ '#' =>
-                            buffer.append(c)
-                            index += 1
-
-                        /* toggle underline on/off with #u */
-                        case 'u' =>
-                            underline = !underline
-
-                            if (underline) {
-                                buffer.append("\u001b[4m")
-                            }
-                            else {
-                                buffer.append("\u001b[0")
-                                if (bold) {
-                                    buffer.append(";1")
-                                }
-                                if (last != -1) {
-                                    buffer.append(";")
-                                    buffer.append(ansiTable(last).cString)
-                                }
-                                buffer.append("m")
-                            }
-
-                        /* #n should clear all tags */
-                        case 'n' =>
-                            if (last != -1 || underline || bold) {
-                                underline = false
-                                bold = false
-                                buffer.append("\u001b[0m")
-                            }
-
-                            last = -1
-
-                        case c =>
-                            ansiTable.indexWhere { t => t.cTag == c } match {
-                                case -1 =>
-                                    buffer.append('#')
-
-                                case tableIndex =>
-                                    if (last != tableIndex) {
-                                        var cSequence = false
-
-                                        /* escape sequence */
-                                        buffer.append("\u001b[")
-
-                                        /* remember if a color change is needed */
-                                        if (last == -1 || last / 2 != tableIndex / 2) {
-                                            cSequence = true
-                                        }
-
-                                        /* handle font boldness */
-                                        if (bold && ansiTable(tableIndex).aFlag == eTHIN) {
-                                            buffer.append("0")
-                                            bold = false
-
-                                            if (underline) {
-                                                buffer.append(";4")
-                                            }
-
-                                            /* changing to eTHIN wipes the old color */
-                                            buffer.append(";")
-                                            cSequence = true
-                                        }
-                                        else if (!bold && ansiTable(tableIndex).aFlag == eBOLD) {
-                                            buffer.append("1")
-                                            bold = true
-
-                                            if (cSequence) {
-                                                buffer.append(";")
-                                            }
-                                        }
-
-                                        /* add color sequence if needed */
-                                        if (cSequence) {
-                                            buffer.append(ansiTable(tableIndex).cString)
-                                        }
-
-                                        buffer.append("m")
-                                    }
-
-                                    /* remember the last color */
-                                    last = tableIndex
-                            }
-                    }
-
-                case c =>
-                    buffer.append(c)
-                    index += 1
-            }
-        }
-
-        // last byte
-        if (index == outputBytes.length - 1) {
-            buffer.append(outputBytes(index))
-        }
-
-        /* and terminate it with the standard color */
-        if (last != -1 || underline || bold) {
-            buffer.append("\u001b[0m")
-        }
-
-        /* add data to buffer */
-        dsock.appendOutput(buffer.toString())
+        dsock.appendOutput(Ansi.convertColorCodes(text))
     }
 
     /*
-     * Text_to_socket()
-     *
-     * Sends text directly to the socket,
-     * will compress the data if needed.
+     * Sends text directly to the socket.
      */
     def text_to_socket(dsock: dSocket, txt: String): Unit = {
         dsock.control.getOutputStream().write(txt.getBytes())
@@ -321,10 +165,7 @@ class MudSocket(mudPort: Int)
     }
 
     /*
-     * New_socket()
-     *
-     * Initializes a new socket, get's the hostname
-     * and puts it in the active socket_list.
+     * Initializes a new socket, get's the hostname and puts it in the active socket_list.
      */
     def new_socket(sock: Socket): Boolean = {
 
@@ -341,14 +182,11 @@ class MudSocket(mudPort: Int)
         text_to_buffer(sock_new, COMPRESS_WILL)
         text_to_buffer(sock_new, GMCP_WILL)
 
-        /* send the greeting */
         text_to_buffer(sock_new, "This is the greeting\n\r\n\r")
         text_to_buffer(sock_new, "What is your name? ")
 
-        /* initialize socket events */
         eventHandler.init_events_socket(sock_new)
 
-        /* everything went as it was supposed to */
         true
     }
 

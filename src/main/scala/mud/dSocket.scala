@@ -16,11 +16,6 @@ object dSocket {
             false,
             NewName,
             sock
-            // 0,
-            // 0,
-            // z_stream      * out_compress,    /* MCCP support */
-            // new Array[Byte](256),
-            // false
         )
     }
 }
@@ -33,11 +28,6 @@ case class dSocket(
     var bust_prompt: Boolean,
     var state: ConnStatus,
     control: Socket
-    // var top_output: Int,
-    // compressing: Int,                   /* MCCP support */
-    // z_stream      * out_compress,    /* MCCP support */
-    // out_compress_buf: Array[Byte],      /* MCCP support */
-    // gmcp_enabled: Boolean               /* GMCP support */
 ) {
 
     private var outbuf = "" // or maybe a byte array instead?? Array[Byte], // [MAX_OUTPUT];
