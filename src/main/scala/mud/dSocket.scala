@@ -27,7 +27,7 @@ case class dSocket(
     var inbuf: String, // or maybe a byte array instead?? Array[Byte], // [MAX_BUFFER];
     var bust_prompt: Boolean,
     var state: ConnStatus,
-    control: Socket
+    _control: Socket
 ) {
 
     private var outbuf = "" // or maybe a byte array instead?? Array[Byte], // [MAX_OUTPUT];
@@ -56,7 +56,7 @@ case class dSocket(
      * Will also close the socket if it tries a buffer overflow.
      */
     def read_from_socket(): Boolean = {
-        val input = control.getInputStream()
+        val input = _control.getInputStream()
         if (input.available() > 0) {
             val buf = new Array[Byte](256)
             val numRead = input.read(buf)
@@ -109,7 +109,7 @@ case class dSocket(
      */
     def close_socket(): Unit = {
         IO.log_string(s"Closing link to ${if (player.isDefined) player.get.name else this}")(Nil)
-        control.close()
+        _control.close()
         state = Closed
     }
 

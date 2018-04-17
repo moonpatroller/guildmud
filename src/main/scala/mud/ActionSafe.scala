@@ -2,11 +2,11 @@ package mud
 
 import mud._
 
+/**
+ * This handles non-fighting player actions.
+ */
 class ActionSafe(help: Help)
 {
-    /*
-     * This file handles non-fighting player actions.
-     */
     def cmd_say(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {
         if (arg == "") {
             MudSocket.text_to_mobile(dMob, "Say what?\n\r")
@@ -17,15 +17,14 @@ class ActionSafe(help: Help)
     }
 
     def cmd_quit(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {
-        /* log the attempt */
-        val buf = s"${dMob.name} has left the game."
-        IO.log_string(buf)(Nil)
+        IO.log_string(s"${dMob.name} has left the game.")(Nil)
 
         Save.save_player(dMob)
 
-        dMob.socket.foreach(_.player = None)
-        // Utils.free_mobile(dMob)
-        dMob.socket foreach { _.close_socket() }
+        dMob.socket foreach { sock =>
+            sock.player = None
+            sock.close_socket()
+        }
     }
 
     def cmd_shutdown(dMob: dMobile, arg: String, mudSocket: MudSocket): Unit = {
@@ -108,7 +107,7 @@ class ActionSafe(help: Help)
         }
 
         if (!found) {
-            MudSocket.text_to_mobile(dMob, "Noone is currently linkdead.\n\r")
+            MudSocket.text_to_mobile(dMob, "No one is currently linkdead.\n\r")
         }
     }
 

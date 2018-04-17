@@ -4,24 +4,14 @@ import java.text.SimpleDateFormat
 
 import mud._
 
+/**
+ * This file contains all sorts of utility functions used all sorts of places in the code.
+ */
 object Utils
 {
-    /*
-     * This file contains all sorts of utility functions used
-     * all sorts of places in the code.
-     */
-
-    /*
-     * Check to see if a given name is legal, returning FALSE if it fails our high standards...
-     */
     def check_name(name: String): Boolean = {
         name.length() >= 3 && name.length() <= 12 && !name.toCharArray().exists { !Character.isLetter(_) }
     }
-
-    // def free_mobile(dMob: dMobile, eventHandler: EventHandler): Unit = {
-    //     dMob.socket.foreach { sock => sock.player = None }
-    //     dMob.events.foreach { eventHandler.dequeue_event(_) }
-    // }
 
     def communicate(dMob: dMobile, txt: String, range: Int)(implicit dmobile_list: List[dMobile]): Unit = {
         range match {

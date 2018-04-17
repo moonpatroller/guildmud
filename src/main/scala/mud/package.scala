@@ -16,33 +16,32 @@ package object mud {
     val eTHIN = 0
     val eBOLD = 1
 
-    /* A few globals */
+    // A few globals
     val PULSES_PER_SECOND =    4                    /* must divide 1000 : 4, 5 or 8 works */
     val MAX_BUFFER        =  1024                   /* seems like a decent amount         */
     val MAX_OUTPUT        =  2048                   /* well shoot me if it isn't enough   */
     val MAX_HELP_ENTRY    =  4096                   /* roughly 40 lines of blocktext      */
     val MUDPORT           =  9009                   /* just set whatever port you want    */
 
-    /* Connection states */
     trait ConnStatus {
-        def toAskPassword() = this
-        def toClosed() = this
-        def toNewPassword() = this
+        def toAskPassword(dMob: dMobile) = this
+        def toNewPassword(name: String) = this
+        def toVerifyPassword(name: String, passwordHash: String) = this
         def toPlaying() = this
-        def toVerifyPassword() = this
+        def toClosed() = this
     }
     case object NewName extends ConnStatus {
-        override def toNewPassword() = NewPassword
-        override def toAskPassword() = AskPassword
+        override def toNewPassword(name: String) = NewPassword(name)
+        override def toAskPassword(dMob: dMobile) = AskPassword(dMob)
     }
-    case object NewPassword extends ConnStatus {
-        override def toVerifyPassword() = VerifyPassword
+    case class NewPassword(name: String) extends ConnStatus {
+        override def toVerifyPassword(name: String, passwordHash: String) = VerifyPassword(name, passwordHash)
     }
-    case object VerifyPassword extends ConnStatus {
-        override def toNewPassword() = NewPassword
+    case class VerifyPassword(name: String, passwordHash: String) extends ConnStatus {
+        override def toNewPassword(name: String) = NewPassword(name)
         override def toPlaying() = Playing
     }
-    case object AskPassword extends ConnStatus {
+    case class AskPassword(dMob: dMobile) extends ConnStatus {
         override def toClosed() = Closed
         override def toPlaying() = Playing
     }
