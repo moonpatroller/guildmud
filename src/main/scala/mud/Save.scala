@@ -23,7 +23,6 @@ object Save
                 level <- (c --\ "level").as[Int]
             } yield dMobile(None, Nil, name, password, level))
 
-
     def save_player(dMob: dMobile): Unit = {
         val playerPath = Paths.get("./data/players/" + dMob.name)
         Files.createDirectories(playerPath.getParent());
@@ -46,5 +45,4 @@ object Save
     }
 
     def load_profile = load_player(_)
-
 }

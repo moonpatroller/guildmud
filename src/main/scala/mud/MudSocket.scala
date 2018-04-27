@@ -75,8 +75,10 @@ class MudSocket(mudPort: Int)
      */
 
     /* global variables */
-    var dsock_list = new AtomicReference[List[dSocket]](Nil)    /* the linked list of active sockets */
-    var dmobile_list = List[dMobile]()  /* the mobile list of active mobiles */
+    var dsock_list = new AtomicReference[List[dSocket]](Nil)    // the linked list of active sockets
+    var dmobile_list = List[dMobile]()                          // the mobile list of active mobiles
+    val mainArea = Area.load("main-area").get
+    var areas = List(mainArea)
     val help = new Help("./help/")
 
     val eventHandler = new EventHandler()
@@ -134,6 +136,9 @@ class MudSocket(mudPort: Int)
                     }
                 }
             }
+
+            areas foreach { _.doTick() }
+
             dsock_list.accumulateAndGet(Nil, (currentList: List[dSocket], updateList: List[dSocket]) => currentList.filter(_.state != Closed))
 
             eventHandler.heartbeat(this)
@@ -172,6 +177,8 @@ class MudSocket(mudPort: Int)
 
         eventHandler.init_events_player(dsock.player.get)
         eventHandler.strip_event_socket(dsock, Event.EVENT_SOCKET_IDLE)
+
+        mainArea.add(dsock.player.get)
     }
 
     def reInsertSocket(dsock: dSocket): Unit = {

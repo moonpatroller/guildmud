@@ -33,6 +33,8 @@ case class dSocket(
     private var outbuf = "" // or maybe a byte array instead?? Array[Byte], // [MAX_OUTPUT];
     private var next_command: Option[String] = None
 
+    override def toString() = s"dSocket(player: ${player.isDefined}, state: ${state}, ...)"
+
     def getNextCommand(): Option[String] = {
         val next = next_command
         next_command = None

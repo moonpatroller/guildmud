@@ -9,7 +9,7 @@ package object mud {
     // #include "event.h"
     import Event._
 
-    /************************
+    /************************ 
      * Standard definitions *
      ************************/
 
@@ -88,7 +88,7 @@ package object mud {
         var password: String,
         level: Int
     ) {
-        override def toString() = s"dMobile(socket: ${socket.isDefined}, events: ${events}, name: ${name}, password: ${password}, level: ${level})"
+        override def toString() = s"dMobile(socket: ${socket.isDefined}, ..., name: ${name}, password: ${password}, level: ${level})"
         override def hashCode = Objects.hashCode(name) ^ Objects.hashCode(password) + level
     }
 
